@@ -354,9 +354,39 @@ class StampReportingApp(ctk.CTk):
         try:
             if isinstance(record, dict):
                 return record.get(key, default)
-            elif isinstance(record, list) and len(record) > 0:
-                # For list format, try to convert to string and return first element as fallback
-                return str(record[0]) if record else default
+            elif isinstance(record, list):
+                # Map field names to list indices based on API response format
+                # Summary fields: ["MemberNo", "CurrentStamps", "CardsFilled", "RewardsEarned"]
+                summary_field_map = {
+                    'MemberNo': 0,
+                    'CurrentStamps': 1, 
+                    'CardsFilled': 2,
+                    'RewardsEarned': 3
+                }
+                
+                # Transaction fields: ["MemberSalesHeaderRecid", "MemberNo", "SaleStampsEarned", "RewardsEarned", "StoreName", "Amount", "TxnDate"]
+                transaction_field_map = {
+                    'MemberSalesHeaderRecid': 0,
+                    'MemberNo': 1,
+                    'SaleStampsEarned': 2,
+                    'RewardsEarned': 3,
+                    'StoreName': 4,
+                    'Amount': 5,
+                    'TxnDate': 6
+                }
+                
+                # Try transaction fields first, then summary fields
+                if key in transaction_field_map:
+                    field_index = transaction_field_map[key]
+                elif key in summary_field_map:
+                    field_index = summary_field_map[key]
+                else:
+                    field_index = None
+                
+                if field_index is not None and field_index < len(record):
+                    return record[field_index]
+                else:
+                    return default
             else:
                 return default
         except Exception as e:
@@ -570,7 +600,7 @@ class StampReportingApp(ctk.CTk):
             filename = filedialog.asksaveasfilename(
                 defaultextension=".csv",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-                initialname=default_filename
+                initialfile=default_filename
             )
             
             if filename:
@@ -594,7 +624,7 @@ class StampReportingApp(ctk.CTk):
             filename = filedialog.asksaveasfilename(
                 defaultextension=".json",
                 filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-                initialname=default_filename
+                initialfile=default_filename
             )
             
             if filename:
