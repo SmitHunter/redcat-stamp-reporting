@@ -349,6 +349,20 @@ class StampReportingApp(ctk.CTk):
         if progress is not None:
             self.progress_bar.set(progress)
 
+    def safe_get_record_value(self, record, key, default='N/A'):
+        """Safely get a value from a record regardless of format (dict or list)"""
+        try:
+            if isinstance(record, dict):
+                return record.get(key, default)
+            elif isinstance(record, list) and len(record) > 0:
+                # For list format, try to convert to string and return first element as fallback
+                return str(record[0]) if record else default
+            else:
+                return default
+        except Exception as e:
+            self.log(f"⚠️ Error getting '{key}' from record: {e}")
+            return default
+
     def display_results(self, data, report_type):
         """Display report results in the results textbox"""
         self.results_display.configure(state="normal")
@@ -359,13 +373,20 @@ class StampReportingApp(ctk.CTk):
             self.results_display.configure(state="disabled")
             return
         
+        # Debug logging to understand data structure
+        self.log(f"🔍 Debug: Data type = {type(data)}")
+        if isinstance(data, list) and len(data) > 0:
+            self.log(f"🔍 Debug: First record type = {type(data[0])}")
+        elif isinstance(data, dict):
+            self.log(f"🔍 Debug: Dict keys = {list(data.keys())}")
+        
         # Handle both response formats: direct list or dict with 'data' key
         if isinstance(data, list):
             records = data
         elif isinstance(data, dict) and 'data' in data:
             records = data['data']
         else:
-            self.results_display.insert("end", "Unexpected API response format")
+            self.results_display.insert("end", f"Unexpected API response format: {type(data)}")
             self.results_display.configure(state="disabled")
             return
             
@@ -373,6 +394,10 @@ class StampReportingApp(ctk.CTk):
             self.results_display.insert("end", "No records found")
             self.results_display.configure(state="disabled")
             return
+            
+        # Debug first record structure
+        if len(records) > 0:
+            self.log(f"🔍 Debug: First record = {records[0]}")
         
         # Format results as a table
         if report_type == "summary":
@@ -381,7 +406,12 @@ class StampReportingApp(ctk.CTk):
             self.results_display.insert("end", header)
             
             for record in records:
-                line = f"{str(record.get('MemberNo', 'N/A')):<10} {str(record.get('CurrentStamps', 'N/A')):<8} {str(record.get('CardsFilled', 'N/A')):<6} {str(record.get('RewardsEarned', 'N/A')):<8}\n"
+                member_no = self.safe_get_record_value(record, 'MemberNo')
+                current_stamps = self.safe_get_record_value(record, 'CurrentStamps')
+                cards_filled = self.safe_get_record_value(record, 'CardsFilled')
+                rewards_earned = self.safe_get_record_value(record, 'RewardsEarned')
+                
+                line = f"{str(member_no):<10} {str(current_stamps):<8} {str(cards_filled):<6} {str(rewards_earned):<8}\n"
                 self.results_display.insert("end", line)
                 
         elif report_type == "transactions":
@@ -390,7 +420,15 @@ class StampReportingApp(ctk.CTk):
             self.results_display.insert("end", header)
             
             for record in records:
-                line = f"{str(record.get('MemberSalesHeaderRecid', 'N/A')):<12} {str(record.get('MemberNo', 'N/A')):<10} {str(record.get('SaleStampsEarned', 'N/A')):<7} {str(record.get('RewardsEarned', 'N/A')):<8} {str(record.get('StoreName', 'N/A'))[:14]:<15} {str(record.get('Amount', 'N/A')):<10} {str(record.get('TxnDate', 'N/A'))[:10]:<12}\n"
+                txn_id = self.safe_get_record_value(record, 'MemberSalesHeaderRecid')
+                member_no = self.safe_get_record_value(record, 'MemberNo')
+                stamps_earned = self.safe_get_record_value(record, 'SaleStampsEarned')
+                rewards_earned = self.safe_get_record_value(record, 'RewardsEarned')
+                store_name = self.safe_get_record_value(record, 'StoreName')
+                amount = self.safe_get_record_value(record, 'Amount')
+                txn_date = self.safe_get_record_value(record, 'TxnDate')
+                
+                line = f"{str(txn_id):<12} {str(member_no):<10} {str(stamps_earned):<7} {str(rewards_earned):<8} {str(store_name)[:14]:<15} {str(amount):<10} {str(txn_date)[:10]:<12}\n"
                 self.results_display.insert("end", line)
         
         self.results_display.configure(state="disabled")
