@@ -96,25 +96,46 @@ def get_stampcard_transactions(token, start=0, limit=1000, order_by="MemberSales
 
 def export_to_csv(data, filename, report_type):
     """Export report data to CSV file"""
-    if not data or 'data' not in data or not data['data']:
+    if not data:
         raise ValueError("No data to export")
     
+    # Handle both response formats
+    if isinstance(data, list):
+        records = data
+    elif isinstance(data, dict) and 'data' in data:
+        records = data['data']
+    else:
+        raise ValueError("Unexpected data format for export")
+    
+    if not records:
+        raise ValueError("No records to export")
+    
     with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-        if data['data']:
-            fieldnames = data['data'][0].keys()
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(data['data'])
+        fieldnames = records[0].keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(records)
 
 def export_to_json(data, filename, report_type):
     """Export report data to JSON file"""
     if not data:
         raise ValueError("No data to export")
     
+    # Handle both response formats
+    if isinstance(data, list):
+        records = data
+        record_count = len(data)
+    elif isinstance(data, dict) and 'data' in data:
+        records = data['data']
+        record_count = len(data['data'])
+    else:
+        records = []
+        record_count = 0
+    
     export_data = {
         'report_type': report_type,
         'generated_at': datetime.now().isoformat(),
-        'total_records': len(data.get('data', [])),
+        'total_records': record_count,
         'data': data
     }
     
@@ -333,12 +354,21 @@ class StampReportingApp(ctk.CTk):
         self.results_display.configure(state="normal")
         self.results_display.delete("1.0", "end")
         
-        if not data or 'data' not in data:
+        if not data:
             self.results_display.insert("end", "No data returned from API")
             self.results_display.configure(state="disabled")
             return
         
-        records = data['data']
+        # Handle both response formats: direct list or dict with 'data' key
+        if isinstance(data, list):
+            records = data
+        elif isinstance(data, dict) and 'data' in data:
+            records = data['data']
+        else:
+            self.results_display.insert("end", "Unexpected API response format")
+            self.results_display.configure(state="disabled")
+            return
+            
         if not records:
             self.results_display.insert("end", "No records found")
             self.results_display.configure(state="disabled")
@@ -468,7 +498,13 @@ class StampReportingApp(ctk.CTk):
             
             # Success
             self.progress_bar.set(1.0)
-            record_count = len(data.get('data', [])) if data and 'data' in data else 0
+            # Calculate record count based on response format
+            if isinstance(data, list):
+                record_count = len(data)
+            elif isinstance(data, dict) and 'data' in data:
+                record_count = len(data['data'])
+            else:
+                record_count = 0
             self.log(f"🎉 Report completed! {record_count} records retrieved")
             
             # Enable export buttons
