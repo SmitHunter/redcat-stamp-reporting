@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Configuration backups
+config.json.backup
+*.bak
+
+# IDE files
+.vscode/
+.idea/
+
+# Export files
+*.csv
+*.json
+!config.json

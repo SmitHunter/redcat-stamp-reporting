@@ -1,0 +1,15 @@
+{
+    "api": {
+        "base_url": "https://your-api-url.com/api/v1",
+        "auth_type": "U"
+    },
+    "ui": {
+        "window_title": "RedCat Stamp Card Reporting",
+        "default_width": 900,
+        "default_height": 700
+    },
+    "reports": {
+        "default_limit": 1000,
+        "auto_export": false
+    }
+}
